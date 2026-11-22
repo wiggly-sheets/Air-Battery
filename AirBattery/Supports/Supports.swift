@@ -353,7 +353,7 @@ func getPowerState() -> iBattery {
 }
 
 func getPowerColor(_ device: Device) -> String {
-    if device.lowPower { return "my_yellow" }
+    if device.lowPower { return "my_orange" }
     
     var colorName = "my_green"
     if device.batteryLevel <= 10 {
