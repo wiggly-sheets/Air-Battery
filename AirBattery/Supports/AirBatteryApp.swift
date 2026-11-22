@@ -36,62 +36,11 @@ struct AirBatteryApp: App {
         registerNotificationCategory()
     }
     
-    // Settings window setup, rebuilt clean end-to-end (previously patched incrementally):
-    // solid/opaque background, fixed non-resizable 600x440 size, and the sidebar width lock
-    // are all configured together up front here instead of layered on after the fact.
+    // The gear icon and the app menu both open the manual SettingsWindowController, so this
+    // scene is only a fallback. It shows the same plain native settings view.
     var body: some Scene {
         Settings {
             SettingsView()
-                .background(
-                    WindowAccessor(
-                        onWindowOpen: { w in
-                            guard let w = w else { return }
-                            //w.level = .floating
-                            w.titlebarSeparatorStyle = .none
-                            // The title bar is allowed to show the real macOS vibrancy/blur
-                            // material (matching the sidebar's own .behindWindow material in
-                            // SettingsView), per what was asked for - the sidebar and title bar
-                            // both blur the desktop behind them, while the detail pane on the
-                            // right stays fully solid since it has its own explicit opaque
-                            // background applied directly in SettingsView.
-                            w.titlebarAppearsTransparent = true
-                            w.isOpaque = false
-                            w.backgroundColor = NSColor.clear
-                            // Fixed size, not resizable - this window's layout is designed for
-                            // exactly 600x440, so lock it instead of letting it stretch and break.
-                            w.styleMask.remove(.resizable)
-                            w.contentMinSize = NSSize(width: 600, height: 440)
-                            w.contentMaxSize = NSSize(width: 600, height: 440)
-                            // The sidebar's fixed width and non-draggable divider are now
-                            // handled natively in SettingsView via .navigationSplitViewColumnWidth
-                            // instead of reaching into the AppKit NSSplitViewController here.
-                            // Changing isOpaque/backgroundColor/styleMask above happens after the
-                            // window already exists, which can leave behind a stale cached shadow
-                            // that doesn't match the window's new shape - showing up as a faint
-                            // offset "ghost" edge behind the real window. Forcing a shadow/display
-                            // refresh here makes sure what's drawn matches the new window state.
-                            w.invalidateShadow()
-                            w.display()
-                            // SwiftUI's .scrollContentBackground(.hidden) doesn't reliably strip
-                            // the sidebar List's own opaque background on macOS the way it does
-                            // on iOS, which was painting solid white over the frosted-glass
-                            // material placed behind it. Reaching into the actual NSScrollView
-                            // backing the sidebar and turning off its own background painting
-                            // removes that opaque layer directly, letting the glass material
-                            // underneath show through as intended.
-                            func clearScrollViewBackgrounds(_ view: NSView) {
-                                if let scrollView = view as? NSScrollView {
-                                    scrollView.drawsBackground = false
-                                }
-                                for sub in view.subviews { clearScrollViewBackgrounds(sub) }
-                            }
-                            if let nsSplitView = findNSSplitVIew(view: w.contentView),
-                               let sidebarPane = nsSplitView.arrangedSubviews.first {
-                                clearScrollViewBackgrounds(sidebarPane)
-                            }
-                            w.orderFront(nil)
-                        })
-                )
         }
     }
 }
@@ -347,6 +296,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifi
             // laid out" warning right at startup.
             DispatchQueue.main.async {
                 button.frame = iconView.frame
+                // macOS snapshots menu bar items for Space transitions. If that snapshot is
+                // taken while Low Power Mode paints the icon yellow, it can keep flashing that
+                // old colour after LPM is turned off (the live icon is already green again).
+                // Opting this status item out of snapshot restoration makes macOS use the live
+                // view instead of the stale snapshot.
+                button.window?.disableSnapshotRestoration()
+                button.window?.isRestorable = false
             }
             button.action = #selector(togglePopover(_ :))
         }

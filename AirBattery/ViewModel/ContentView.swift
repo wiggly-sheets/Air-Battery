@@ -1199,54 +1199,19 @@ class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     private convenience init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 380),
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 440),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
         window.title = "AirBattery Settings".local
-        window.titlebarSeparatorStyle = .none
-        // NavigationSplitView attaches a real toolbar (for the sidebar-toggle button), which
-        // makes macOS merge the title bar and toolbar into one combined "unified" bar - taller
-        // than a plain title bar with no toolbar. .unifiedCompact is Apple's own shorter
-        // variant of that same merged bar (visible in apps like Notes/Reminders), instead of
-        // the default, roomier .unified.
-        window.toolbarStyle = .unifiedCompact
         window.isReleasedWhenClosed = false
+        window.contentMinSize = NSSize(width: 600, height: 440)
+        window.contentMaxSize = NSSize(width: 600, height: 440)
         window.center()
-        // Liquid Glass pass: the window was previously left at its default opaque white
-        // background, so SettingsView() just sat on a flat panel with no translucency at
-        // all - unlike the main popover (see BlurView usage in popover below), which already
-        // used a real NSVisualEffectView material and so already picks up macOS's native
-        // glass rendering. Making the window itself non-opaque with a clear background lets
-        // an NSVisualEffectView underneath actually show its blur-behind-window effect,
-        // matching the popover's look and letting Settings pick up the same system-level
-        // Liquid Glass treatment on macOS 26+ automatically - no hand-drawn "glass" effect
-        // needed, since this is a real system material like the popover already uses.
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.contentView = NSHostingView(rootView: ZStack {
-            BlurView(material: .popover)
-            SettingsView()
-        })
+        window.contentView = NSHostingView(rootView: SettingsView())
         self.init(window: window)
         window.delegate = self
-        // Mirrors the split-view sizing constraints the old WindowAccessor-based Settings scene
-        // applied once its window appeared, so the sidebar keeps behaving the same way.
-        DispatchQueue.main.async {
-            if let nsSplitView = findNSSplitVIew(view: window.contentView),
-               let controller = nsSplitView.delegate as? NSSplitViewController {
-                controller.splitViewItems.first?.canCollapse = false
-                controller.splitViewItems.first?.minimumThickness = 175
-                controller.splitViewItems.first?.maximumThickness = 175
-            }
-            // NavigationSplitView installs its own real NSToolbar on this window (with the
-            // sidebar-collapse button on it) once it's laid out - the SwiftUI-level
-            // .toolbar(.hidden, for: .windowToolbar) modifier in SettingsView doesn't reach
-            // that, since it lives on the actual NSWindow, not inside SwiftUI's own toolbar
-            // content. Clearing it directly here removes the button for good.
-            window.toolbar = nil
-        }
     }
 
     func open() {

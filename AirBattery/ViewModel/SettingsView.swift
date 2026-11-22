@@ -46,17 +46,12 @@ struct SettingsView: View {
     @State private var selectedItem: String? = "General"
     @AppStorage("showDebug") var showDebug: Bool = false
 
-    // Re-attempted the NavigationSplitView modernization (previous note here said this had been
-    // reverted because the split view draws its own sidebar-collapse toggle button that
-    // .toolbar(removing:)/.toolbar(.hidden:) couldn't reach). That modifier does work when
-    // applied to the NavigationSplitView itself (it was previously being applied to an inner
-    // view instead, which is why it silently did nothing) - .toolbar(removing: .sidebarToggle)
-    // below removes the button. List(selection:) + plain .tag(...) rows replace the deprecated
-    // tag-based NavigationLink(destination:tag:selection:label:) initializer, with the detail
-    // pane driven by a switch on the same selectedItem instead of NavigationLink's own
-    // destination routing.
+    // Plain sidebar + detail split instead of NavigationSplitView. The split view always
+    // installs an NSToolbar for its sidebar toggle, even after the toggle is hidden, and
+    // clearing that toolbar after layout caused it to flash in and out. A fixed HStack has
+    // no toolbar at all and matches the native Settings look.
     var body: some View {
-        NavigationSplitView(columnVisibility: .constant(.all)) {
+        HStack(spacing: 0) {
             List(selection: $selectedItem) {
                 Label("General", image: "gear").tag("General")
                 Label("Menu Bar & Dock", image: "dock").tag("Display")
@@ -69,33 +64,28 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.sidebar)
-            // Thinner gap above the first row - was 9pt, now 4pt.
             .padding(.top, 4)
-            // NavigationSplitView lets you drag-resize the sidebar/detail divider by default,
-            // which the old NavigationView never allowed - pinning min/ideal/max to the same
-            // value locks the sidebar at a fixed width so the divider can't be dragged at all,
-            // matching the old fixed-layout behavior.
-            .navigationSplitViewColumnWidth(min: 165, ideal: 165, max: 165)
-        } detail: {
+            .frame(width: 175)
+            Divider()
             // Only Menu Bar & Dock (DisplayView) gets wrapped in a ScrollView - it's the
             // one tab whose content is taller than the fixed 440pt window, and that was
             // rendering partially scrolled/cut off until nudged. Every other tab fits fine
             // as-is, so wrapping them too just introduced an unwanted, unnecessary scroll.
-            switch selectedItem {
-            case "General": GeneralView()
-            case "Display": ScrollView { DisplayView() }
-            case "Nearbility": NearbilityView()
-            case "Nearcast": NearcastView()
-            case "Widget": WidgetView()
-            case "Blocklist": BlacklistView()
-            case "Debug": DebugView(selectedItem: $selectedItem)
-            default: GeneralView()
+            Group {
+                switch selectedItem {
+                case "General": GeneralView()
+                case "Display": ScrollView { DisplayView() }
+                case "Nearbility": NearbilityView()
+                case "Nearcast": NearcastView()
+                case "Widget": WidgetView()
+                case "Blocklist": BlacklistView()
+                case "Debug": DebugView(selectedItem: $selectedItem)
+                default: GeneralView()
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .navigationSplitViewStyle(.balanced)
-        .toolbar(removing: .sidebarToggle)
         .frame(width: 600, height: 440)
-        .navigationTitle("AirBattery Settings")
     }
 }
 
