@@ -279,6 +279,18 @@ struct BlurView: NSViewRepresentable {
     }
 }
 
+struct PopoverBackground: View {
+    var fromDock: Bool
+
+    var body: some View {
+        if #available(macOS 26.0, *) {
+            Color.clear.glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        } else {
+            Color.clear.background(BlurView(material: fromDock ? .menu : .popover))
+        }
+    }
+}
+
 // Support for issue #129/#117. ProcessInfo.isLowPowerModeEnabled requires macOS 12+, which is
 // always true now that the minimum deployment target is macOS 14.0.
 func getLowPowerModeEnabled() -> Bool {
@@ -358,16 +370,8 @@ struct popover: View {
 
     private var bodyContent: some View {
         ZStack{
-            // Liquid Glass pass: this was previously "if fromDock { ...BlurView... }" - the
-            // blur material was ONLY ever applied when this view is shown inside the custom
-            // dockWindow (Dock display mode). The far more common case - clicking the menu
-            // bar icon, which shows this same view inside a real AppKit NSPopover - had NO
-            // explicit glass material behind it at all, just whatever bare-minimum background
-            // NSPopover supplies on its own. That's why the regular dropdown looked flat/
-            // opaque compared to system UI, even on macOS 26. Applying the same BlurView here
-            // unconditionally (using .popover, the material AppKit itself designed for this
-            // exact context) gives the dropdown a real glass background in both modes.
-            Color.clear.background(BlurView(material: fromDock ? .menu : .popover))
+            // Real Liquid Glass on macOS 26+, with the old vibrancy material as the fallback.
+            PopoverBackground(fromDock: fromDock)
             VStack(spacing: 0){
                 if !fromDock {
                     Color.clear
