@@ -443,14 +443,13 @@ struct popover: View {
                     // Fixes issue #129/#117 (feature request): quick Low Power Mode toggle.
                     Button(action: {
                         let turningOn = !isLowPowerMode
-                        // pmset requires root, so the unprivileged call this used to make
-                        // always failed. Reuse the existing admin helper, which prompts for
-                        // an administrator password.
-                        CommandLineTool.runAsRoot("/usr/bin/pmset -a lowpowermode \(turningOn ? "1" : "0")") {
-                            // Re-read the public API instead of trusting pmset's output.
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                isLowPowerMode = getLowPowerModeEnabled()
-                            }
+                        // pmset requires root. The first toggle installs a sudoers rule
+                        // limited to the two lowpowermode commands, so later toggles run
+                        // without a password prompt.
+                        CommandLineTool.setLowPowerMode(turningOn)
+                        // Re-read the public API instead of trusting pmset's output.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            isLowPowerMode = getLowPowerModeEnabled()
                         }
                     }, label: {
                         Image(systemName: isLowPowerMode ? "leaf.circle.fill" : "leaf.circle")
