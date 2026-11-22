@@ -19,7 +19,7 @@ var netcastService: MultipeerService = MultipeerService(serviceType: "airbattery
 let ncFolder = fd.urls(for: .libraryDirectory, in: .userDomainMask).first!.appendingPathComponent("Containers/\(AirBatteryModel.key)/Data/Documents/NearcastData")
 let systemUUID = getMacDeviceUUID()
 var dockWindow = AutoHideWindow()
-var menuPopover = NSPopover()
+var menuPopover = MenuBarPopoverWindow()
 let bleBattery = BLEBattery()
 let btdBattery = BTDBattery()
 var updateDelay = 1
@@ -450,20 +450,36 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifi
     }*/
     
     @objc func togglePopover(_ sender: Any?) {
-        if let button = statusBarItem.button, !menuPopover.isShown {
-            var allDevices = AirBatteryModel.getAll()
-            let ibStatus = InternalBattery.status
-            if ibStatus.hasBattery { allDevices = insertInternalBattery(into: allDevices, entry: ib2ab(ibStatus)) }
-            let contentView = NSHostingController(rootView: popover(fromDock: false, allDevice: allDevices))
-            menuPopover.setValue(true, forKeyPath: "shouldHideAnchor")
-            menuPopover.contentViewController = contentView
-            menuPopover.behavior = .transient
-            var bound = button.bounds
-            if getMenuBarHeight() == 24.0 { bound.origin.y -= 6 }
-            menuPopover.show(relativeTo: bound, of: button, preferredEdge: .minY)
-            //menuPopover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            menuPopover.contentViewController?.view.window?.makeKeyAndOrderFront(nil)
+        if menuPopover.isVisible {
+            menuPopover.orderOut(nil)
+            return
         }
+        guard let button = statusBarItem.button, let buttonWindow = button.window else { return }
+
+        var allDevices = AirBatteryModel.getAll()
+        let ibStatus = InternalBattery.status
+        if ibStatus.hasBattery { allDevices = insertInternalBattery(into: allDevices, entry: ib2ab(ibStatus)) }
+
+        // 10pt clear margin gives the SwiftUI card's shadow room; the card itself owns the
+        // rounded background, so no NSPopover Liquid Glass chrome is involved.
+        let hosting = NSHostingView(rootView: popover(fromDock: false, allDevice: allDevices).padding(10))
+        var size = hosting.fittingSize
+        if size.width < 1 { size.width = 372 }
+        if size.height < 1 { size.height = 300 }
+        hosting.frame = NSRect(origin: .zero, size: size)
+        menuPopover.contentView = hosting
+        menuPopover.setContentSize(size)
+
+        let buttonRect = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
+        var origin = NSPoint(x: buttonRect.midX - size.width / 2,
+                             y: buttonRect.minY - size.height - 2)
+        if let screen = buttonWindow.screen {
+            let visible = screen.visibleFrame
+            origin.x = max(visible.minX + 8, min(origin.x, visible.maxX - size.width - 8))
+            origin.y = max(visible.minY + 8, origin.y)
+        }
+        menuPopover.setFrameOrigin(origin)
+        menuPopover.makeKeyAndOrderFront(nil)
     }
     
     @objc func handleURLEvent(_ event: NSAppleEventDescriptor, replyEvent: NSAppleEventDescriptor) {
@@ -512,6 +528,38 @@ class AutoHideWindow: NSWindow {
     override func resignKey() {
         super.resignKey()
         self.orderOut(nil)
+    }
+}
+
+// Replaces NSPopover for the menu bar dropdown: NSPopover's Liquid Glass chrome has a fixed
+// 20pt corner radius on macOS 26 that cannot be changed through public API. The SwiftUI card
+// already draws its own smaller rounded background, so use a plain transparent window for it.
+final class MenuBarPopoverWindow: NSWindow {
+    var isShown: Bool { isVisible }
+
+    init() {
+        super.init(contentRect: .zero, styleMask: [.borderless], backing: .buffered, defer: false)
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = false
+        level = .popUpMenu
+        collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        isMovableByWindowBackground = false
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override var canBecomeKey: Bool { true }
+
+    override func resignKey() {
+        super.resignKey()
+        orderOut(nil)
+    }
+
+    override func performClose(_ sender: Any?) {
+        orderOut(nil)
     }
 }
 

@@ -331,7 +331,7 @@ struct popover: View {
     // - means none of the existing hover/pin/hide/click logic in bodyContent has to be touched
     // or re-verified, since there's no compiler here to catch a mistake in that risky spot.
     var body: some View {
-        // Toned down from the first pass: cornerRadius 18->12, shadow radius 14->6 and
+        // Toned down twice from the first pass: cornerRadius 18->12->8, shadow radius 14->6 and
         // opacity 0.18->0.1. The original values made the whole panel visibly bulkier
         // (a wide soft shadow reads as "bigger" even though the actual content didn't
         // grow), which is what looked oversized. This keeps the glass-card look but much
@@ -341,9 +341,9 @@ struct popover: View {
             // fill whatever height NSPopover/NSHostingController happens to offer it - this
             // is the likely cause of the blank space showing up below the last device row.
             .fixedSize(horizontal: false, vertical: true)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .strokeBorder(
                         LinearGradient(
                             colors: [Color.white.opacity(0.4), Color.white.opacity(0.05)],
