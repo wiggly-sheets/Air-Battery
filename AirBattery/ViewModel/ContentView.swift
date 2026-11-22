@@ -443,14 +443,12 @@ struct popover: View {
                     // Fixes issue #129/#117 (feature request): quick Low Power Mode toggle.
                     Button(action: {
                         let turningOn = !isLowPowerMode
-                        DispatchQueue.global().async {
-                            _ = process(path: "/usr/bin/pmset", arguments: ["-a", "lowpowermode", turningOn ? "1" : "0"])
-                            // pmset's own stdout is often empty on success, so confirm against
-                            // the public read-only API instead of trusting that silence meant
-                            // success - this also naturally surfaces the case where it's
-                            // silently refused for lack of privileges (isLowPowerMode simply
-                            // won't have changed).
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        // pmset requires root, so the unprivileged call this used to make
+                        // always failed. Reuse the existing admin helper, which prompts for
+                        // an administrator password.
+                        CommandLineTool.runAsRoot("/usr/bin/pmset -a lowpowermode \(turningOn ? "1" : "0")") {
+                            // Re-read the public API instead of trusting pmset's output.
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                 isLowPowerMode = getLowPowerModeEnabled()
                             }
                         }
