@@ -427,6 +427,7 @@ struct DisplayView: View {
                     Text("Hidden").tag("hide")
                     Text("Inside").tag("inside")
                     Text("Outside").tag("outside")
+                    Text("Percentage Only").tag("only")
                 }.disabled(!intBattOnStatusBar)
                 Divider().opacity(0.5)
                 SToggle("Show Time Remaining", isOn: $batteryTimeLeft, tips: "Show the estimated time left on battery when your Mac is running on battery power.")
@@ -467,7 +468,7 @@ struct DisplayView: View {
                     if !levelList.contains(hideLevel) && hideLevel != 100 {
                         Text("\(hideLevel)%").tag(hideLevel)
                     }
-                }.disabled(!intBattOnStatusBar || (batteryPercent == "hide"))
+                }.disabled(!intBattOnStatusBar || batteryPercent == "hide" || batteryPercent == "only")
             }
             SGroupBox(label: "Pinned Devices") {
                 SToggle("Show Battery Bar", isOn: $pinnedBatteryBar, tips: "Show a battery bar graphic instead of a percentage number for devices pinned to the menu bar.")
