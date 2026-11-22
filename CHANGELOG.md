@@ -3,6 +3,32 @@
 All notable changes to this patched build of AirBattery are documented here.
 Based on the official [AirBattery](https://github.com/lihaoyun6/AirBattery) project.
 
+## [Unreleased]
+
+### Added
+
+- Menu bar time remaining for the built-in Mac battery, with left, right, top and bottom positions, and a compact `2h15m` or long `2 hours 15 minutes` format.
+- A separate time-to-full toggle that follows the same position and format as time remaining while the Mac is charging.
+- A percentage-only menu bar style that hides the battery icon.
+- A Liquid Glass popup background on macOS 26 and later.
+
+### Changed
+
+- The Settings window is a native fixed-size window with no toolbar flash.
+- The menu bar dropdown uses a custom window with a smaller corner radius instead of the system popover chrome.
+- Low Power Mode now paints the battery indicator orange. The red, yellow and green percentage thresholds are unchanged.
+
+### Fixed
+
+- The Low Power Mode button now works. It ran `pmset` without root before and always failed; it now runs the command as root and re-reads the system state.
+- Repeated Low Power Mode toggles no longer ask for a password after the first approval.
+
+### Security
+
+- The no-password Low Power Mode toggle uses a narrow rule at `/etc/sudoers.d/airbattery` that permits only `/usr/bin/pmset -a lowpowermode 0` and `1`. Remove it with `sudo rm /etc/sudoers.d/airbattery`.
+
+<!-- pre-versioning -->
+
 ## [1.6.5] - Callie's Patch - 2026-08-24
 
 This release fixes 17 bugs and adds 8 new features on top of the original app — everything from a real concurrency crash that could take the whole app down, to Bluetooth devices that never showed up at all, to smaller UI polish around the pinned menu bar and Settings window.

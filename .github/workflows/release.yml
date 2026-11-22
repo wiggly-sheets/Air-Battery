@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode
+        run: |
+          xcode="$(find /Applications -maxdepth 1 -name 'Xcode_27*.app' -print 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$xcode" ]; then
+            echo "::error::no Xcode 27 installation on this runner"
+            ls /Applications
+            exit 1
+          fi
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+          sdk="$(xcrun --sdk macosx --show-sdk-version)"
+          echo "macOS SDK: $sdk"
+          case "$sdk" in
+            27.*) ;;
+            *) echo "::error::the macOS 27 SDK is required, found $sdk"; exit 1 ;;
+          esac
+
+      - name: The tag must sit on the default branch
+        run: |
+          set -euo pipefail
+          branch="${{ github.event.repository.default_branch }}"
+          git fetch --quiet origin "$branch"
+          if ! git merge-base --is-ancestor HEAD "origin/$branch"; then
+            echo "::error::The tag ${GITHUB_REF_NAME} is not on origin/$branch; cut it from the default branch"
+            exit 1
+          fi
+
+      - name: Install build tools
+        run: brew install create-dmg
+
+      - name: Validate release version
+        id: version
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          REPOSITORY_VERSION="$(tr -d '[:space:]' < VERSION)"
+          if [ "$REPOSITORY_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Release tag v$TAG_VERSION does not match VERSION ($REPOSITORY_VERSION)"
+            exit 1
+          fi
+          echo "tag=$TAG_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Run tests
+        run: make test
+
+      - name: Build and verify
+        env:
+          VERSION: ${{ steps.version.outputs.tag }}
+        run: |
+          make release-artifacts VERSION="$VERSION"
+          make verify VERSION="$VERSION"
+
+      - name: Write the release notes
+        env:
+          VERSION: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          ./scripts/changelog.sh notes "$VERSION" > release-notes.md
+          {
+            echo ""
+            echo "## Checksums"
+            echo ""
+            echo '```'
+            cat "AirBattery-$VERSION.dmg.sha256"
+            echo '```'
+          } >> release-notes.md
+
+      - name: Verify release assets
+        env:
+          VERSION: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          test -s "AirBattery-$VERSION.dmg"
+          test -s "AirBattery-$VERSION.dmg.sha256"
+          shasum -a 256 -c "AirBattery-$VERSION.dmg.sha256"
+          ls -lh "AirBattery-$VERSION.dmg" "AirBattery-$VERSION.dmg.sha256"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: AirBattery ${{ steps.version.outputs.tag }}
+          body_path: release-notes.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            AirBattery-*.dmg
+            AirBattery-*.dmg.sha256
+          fail_on_unmatched_files: true

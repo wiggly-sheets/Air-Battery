@@ -88,3 +88,8 @@ fastlane/test_output
 # https://github.com/johnno1962/injectionforxcode
 
 iOSInjectionProject/
+
+# Release artifacts
+AirBattery-*.dmg
+AirBattery-*.dmg.sha256
+dmgstage/

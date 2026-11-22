@@ -4,9 +4,9 @@
 <h1 align="center">AirBattery</h1>
 <h3 align="center">Get battery usage of all devices on Mac and show them on the Dock / StatusBar / Widgets!
 
-<p align="center"><b>Callie's Patch — v1.6.5</b></p>
+<p align="center"><b>Callie's Patch — v1.6.6</b></p>
 
-This is a personally-patched fork with a batch of bug fixes and new features on top of the original project. See [CHANGELOG.md](https://github.com/callieskye/Air-Battery/blob/main/CHANGELOG.md) for the full list of what's changed. Highlights from this round:
+This is a personally-patched fork with a batch of bug fixes and new features on top of the original project. See [CHANGELOG.md](https://github.com/wiggly-sheets/Air-Battery/blob/main/CHANGELOG.md) for the full list of what's changed. Highlights from this round:
 
 - Fixed a real crash bug — the app could randomly quit or fail to launch, especially right after waking from sleep
 - Fixed duplicate device rows showing up for the same Bluetooth accessory
@@ -19,6 +19,9 @@ This is a personally-patched fork with a batch of bug fixes and new features on 
 - Fixed the Settings window sidebar being drag-resizable when it should be a fixed size
 - Added: mute low-battery alerts per device, Low Power Mode toggle in the dropdown, "always show earbuds separately" option, Copy Device ID button, white widget background option, battery bar for pinned menu bar devices, and a device sort-order picker (name or battery level)
 - Modernized: moved the minimum supported macOS version up to 14.0 and updated the codebase to match — modern SwiftUI navigation (`NavigationSplitView`), the newer two-value `onChange` API, and current IOKit constants, instead of carrying legacy fallback code for old macOS versions this build's users are unlikely to be on anyway
+- Added: menu bar time remaining and time to full for the built-in Mac battery, with position and format options, plus a percentage-only menu bar style
+- Added: native Settings window and a polished dropdown with a Liquid Glass background on macOS 26 and later
+- Fixed: the Low Power Mode toggle now works, and repeated toggles no longer ask for a password
 
 > Note: This build is signed "Sign to Run Locally" under a free personal Apple Developer account and is not notarized. Auto-updates are disabled — check back on this repo for new releases.
 
@@ -26,6 +29,13 @@ This is a personally-patched fork with a batch of bug fixes and new features on 
 ## Installation and Usage
 ### System Requirements:
 - macOS 14.0 and Later *(raised from the original project's macOS 11.0 minimum, so this build could move onto modern SwiftUI/IOKit APIs instead of carrying legacy fallback code)*
+
+### Homebrew:
+```bash
+brew tap wiggly-sheets/homebrew-tap
+brew trust wiggly-sheets/homebrew-tap
+brew install --cask air-battery
+```
 
 ### Usage: 
 - After AirBattery is started, it will be displayed on both the Dock and the status bar by default, or only one of them (can be configured)  
@@ -62,5 +72,4 @@ This is a personally-patched fork with a batch of bug fixes and new features on 
 
 **8. I picked "Battery Level (Low to High)" and a device is still in the wrong spot.**
 > This was a bug in earlier builds — some devices (like an Apple Watch, which reports its battery through its paired iPhone rather than directly) got stuck sorting by the *other* device's level instead of their own. It's fixed now; every device sorts independently by its own battery level in both directions.
-
 
