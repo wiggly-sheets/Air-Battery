@@ -53,6 +53,7 @@ struct mainBatteryView: View {
     @AppStorage("iosBatteryStyle") var iosBatteryStyle = false
     @AppStorage("batteryPercent") var batteryPercent = "outside"
     @AppStorage("batteryTimeLeft") var batteryTimeLeft = false
+    @AppStorage("batteryTimeToFull") var batteryTimeToFull = false
     @AppStorage("batteryTimePosition") var batteryTimePosition = "right"
     @AppStorage("batteryTimeFormat") var batteryTimeFormat = "compact"
     @AppStorage("internalLevel") var internalLevel = false
@@ -66,8 +67,8 @@ struct mainBatteryView: View {
     
     @State var factor = 0.0
 
-    var showTimeLeft: Bool {
-        batteryTimeLeft && item.hasBattery && intBattOnStatusBar && !item.acPowered
+    var showTime: Bool {
+        (item.acPowered ? batteryTimeToFull : batteryTimeLeft) && item.hasBattery && intBattOnStatusBar
             && !item.timeLeft.isEmpty && item.timeLeft != "…" && item.timeLeft != "∞"
     }
 
@@ -192,7 +193,7 @@ struct mainBatteryView: View {
         if !(item.hasBattery && intBattOnStatusBar) { return 36 }
         var width: Double = 42
         if batteryPercent == "outside" && !(item.batteryLevel > hideLevel) { width = 76 }
-        if showTimeLeft {
+        if showTime {
             let horizontal = batteryTimePosition == "left" || batteryTimePosition == "right"
             width = horizontal ? width + timeWidth(9) + 6 : max(width, timeWidth(8) + 4)
         }
@@ -201,7 +202,7 @@ struct mainBatteryView: View {
 
     var body: some View {
         Group {
-            if showTimeLeft {
+            if showTime {
                 switch batteryTimePosition {
                 case "left":
                     HStack(alignment: .center, spacing: 3) { timeLabel(9); batteryContent }

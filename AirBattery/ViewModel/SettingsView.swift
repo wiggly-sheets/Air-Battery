@@ -392,6 +392,7 @@ struct DisplayView: View {
     @AppStorage("intBattOnStatusBar") var intBattOnStatusBar = true
     @AppStorage("batteryPercent") var batteryPercent = "outside"
     @AppStorage("batteryTimeLeft") var batteryTimeLeft = false
+    @AppStorage("batteryTimeToFull") var batteryTimeToFull = false
     @AppStorage("batteryTimePosition") var batteryTimePosition = "right"
     @AppStorage("batteryTimeFormat") var batteryTimeFormat = "compact"
     @AppStorage("hideLevel") var hideLevel = 90
@@ -423,17 +424,20 @@ struct DisplayView: View {
                 SToggle("Show Time Remaining", isOn: $batteryTimeLeft, tips: "Show the estimated time left on battery when your Mac is running on battery power.")
                     .disabled(!intBattOnStatusBar)
                 Divider().opacity(0.5)
-                SPicker("Time Remaining Position", selection: $batteryTimePosition) {
+                SToggle("Show Time to Full", isOn: $batteryTimeToFull, tips: "Show the estimated time until fully charged when your Mac is plugged in.")
+                    .disabled(!intBattOnStatusBar)
+                Divider().opacity(0.5)
+                SPicker("Time Position", selection: $batteryTimePosition) {
                     Text("Left").tag("left")
                     Text("Right").tag("right")
                     Text("Top").tag("top")
                     Text("Bottom").tag("bottom")
-                }.disabled(!intBattOnStatusBar || !batteryTimeLeft)
+                }.disabled(!intBattOnStatusBar || (!batteryTimeLeft && !batteryTimeToFull))
                 Divider().opacity(0.5)
-                SPicker("Time Remaining Format", selection: $batteryTimeFormat) {
+                SPicker("Time Format", selection: $batteryTimeFormat) {
                     Text("2h15m").tag("compact")
                     Text("2 hours 15 minutes").tag("long")
-                }.disabled(!intBattOnStatusBar || !batteryTimeLeft)
+                }.disabled(!intBattOnStatusBar || (!batteryTimeLeft && !batteryTimeToFull))
                 Divider().opacity(0.5)
                 // "Never" was tagged UInt32.max while disappearTime itself is a plain Int -
                 // SwiftUI's Picker compares tag values as type-erased AnyHashable, so a UInt32
