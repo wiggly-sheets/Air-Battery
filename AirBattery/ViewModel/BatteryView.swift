@@ -52,6 +52,9 @@ struct mainBatteryView: View {
     @AppStorage("colorfulBattery") var colorfulBattery = false
     @AppStorage("iosBatteryStyle") var iosBatteryStyle = false
     @AppStorage("batteryPercent") var batteryPercent = "outside"
+    @AppStorage("batteryTimeLeft") var batteryTimeLeft = false
+    @AppStorage("batteryTimePosition") var batteryTimePosition = "right"
+    @AppStorage("batteryTimeFormat") var batteryTimeFormat = "compact"
     @AppStorage("internalLevel") var internalLevel = false
     @AppStorage("hideLevel") var hideLevel = 90
     
@@ -62,91 +65,151 @@ struct mainBatteryView: View {
     @AppStorage("test_iblevel") var test_iblevel = 100
     
     @State var factor = 0.0
-    
-    var body: some View {
-        HStack(alignment: .center, spacing:4){
-            if item.hasBattery && intBattOnStatusBar {
-                if batteryPercent == "outside" && !(item.batteryLevel > hideLevel) {
-                    Text("\(item.batteryLevel)%").font(.system(size: 11))
-                }
-                if !iosBatteryStyle {
-                    let width = round(max(2, min(19, Double(item.batteryLevel)/100*19)))
-                    ZStack(alignment: .leading){
-                        if colorfulBattery || batteryPercent == "inside" {
-                            Image("batt_outline_bold")
-                        } else {
-                            Image("batt_outline")
+
+    var showTimeLeft: Bool {
+        batteryTimeLeft && item.hasBattery && intBattOnStatusBar && !item.acPowered
+            && !item.timeLeft.isEmpty && item.timeLeft != "…" && item.timeLeft != "∞"
+    }
+
+    var timeText: String {
+        let parts = item.timeLeft.split(separator: ":")
+        guard parts.count == 2, let hours = Int(parts[0]), let minutes = Int(parts[1]) else {
+            return item.timeLeft
+        }
+        if batteryTimeFormat == "long" {
+            var components: [String] = []
+            if hours > 0 { components.append("\(hours) hour\(hours == 1 ? "" : "s")") }
+            if minutes > 0 { components.append("\(minutes) minute\(minutes == 1 ? "" : "s")") }
+            return components.isEmpty ? "0 minutes" : components.joined(separator: " ")
+        }
+        if hours > 0 && minutes > 0 { return "\(hours)h\(minutes)m" }
+        if hours > 0 { return "\(hours)h" }
+        return "\(minutes)m"
+    }
+
+    func timeWidth(_ size: CGFloat) -> Double {
+        (timeText as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: .medium)]).width
+    }
+
+    func timeLabel(_ size: CGFloat) -> some View {
+        Text(timeText)
+            .font(.system(size: size, weight: .medium))
+            .monospacedDigit()
+    }
+
+    @ViewBuilder
+    var batteryContent: some View {
+        if item.hasBattery && intBattOnStatusBar {
+            if batteryPercent == "outside" && !(item.batteryLevel > hideLevel) {
+                Text("\(item.batteryLevel)%").font(.system(size: 11))
+            }
+            if !iosBatteryStyle {
+                let width = round(max(2, min(19, Double(item.batteryLevel)/100*19)))
+                ZStack(alignment: .leading){
+                    if colorfulBattery || batteryPercent == "inside" {
+                        Image("batt_outline_bold")
+                    } else {
+                        Image("batt_outline")
+                    }
+                    if batteryPercent == "inside" && !(item.batteryLevel > hideLevel) {
+                        BatteryLevelView(item: item)
+                            .scaleEffect(0.9)
+                            .foregroundColor(colorfulBattery ? Color(getPowerColor(ib2ab(item))) : .primary)
+                            .offset(x: item.batteryLevel < 100 ? -1 : -0.5)
+                    } else {
+                        Rectangle()
+                            .fill(colorfulBattery ? Color(getPowerColor(ib2ab(item))) : (item.batteryLevel <= 10 ? .red : .primary))
+                            .frame(width: width, height: 8, alignment: .leading)
+                            .clipShape(RoundedRectangle(cornerRadius: 1.5, style: .continuous))
+                            .offset(x:2)
+                        if item.acPowered {
+                            Image("batt_" + ((item.isCharging || item.isCharged) ? "bolt" : "plug") + "_mask")
+                                .blendMode(.destinationOut)
+                                .offset(x:6)
+                            Image("batt_" + ((item.isCharging || item.isCharged) ? "bolt" : "plug"))
+                                .offset(x:6)
+                                .foregroundColor(.blackWhite)
                         }
-                        if batteryPercent == "inside" && !(item.batteryLevel > hideLevel) {
+                    }
+                
+                }.compositingGroup()
+            } else {
+                ZStack(alignment: .leading) {
+                    Image("battery.100percent")
+                        .resizable().scaledToFit()
+                        .frame(width: 27)
+                        .opacity(0.4)
+                        .mask (
+                            HStack {
+                                Spacer().frame(minWidth: 0)
+                                Rectangle().frame(width: min(25, CGFloat(100 - item.batteryLevel) / 100 * 27))
+                            }
+                        )
+                    Image("battery.100percent")
+                        .resizable().scaledToFit()
+                        .foregroundColor(colorfulBattery ? Color(getPowerColor(ib2ab(item)) + "2") : (item.batteryLevel <= 10 ? .red : .primary))
+                        .frame(width: 27)
+                        .mask (
+                            HStack {
+                                Rectangle().frame(width: max(2, CGFloat(item.batteryLevel) / 100 * 27))
+                                Spacer().frame(minWidth: 0)
+                            }
+                        )
+                    if batteryPercent == "inside" && !(item.batteryLevel > hideLevel) {
+                        if colorfulBattery {
                             BatteryLevelView(item: item)
-                                .scaleEffect(0.9)
-                                .foregroundColor(colorfulBattery ? Color(getPowerColor(ib2ab(item))) : .primary)
-                                .offset(x: item.batteryLevel < 100 ? -1 : -0.5)
+                                .foregroundColor(.white)
                         } else {
-                            Rectangle()
-                                .fill(colorfulBattery ? Color(getPowerColor(ib2ab(item))) : (item.batteryLevel <= 10 ? .red : .primary))
-                                .frame(width: width, height: 8, alignment: .leading)
-                                .clipShape(RoundedRectangle(cornerRadius: 1.5, style: .continuous))
-                                .offset(x:2)
-                            if item.acPowered {
-                                Image("batt_" + ((item.isCharging || item.isCharged) ? "bolt" : "plug") + "_mask")
-                                    .blendMode(.destinationOut)
-                                    .offset(x:6)
-                                Image("batt_" + ((item.isCharging || item.isCharged) ? "bolt" : "plug"))
-                                    .offset(x:6)
-                                    .foregroundColor(.blackWhite)
-                            }
+                            BatteryLevelView(item: item)
+                                .foregroundColor(.white)
+                                .blendMode(.destinationOut)
                         }
-                        
-                    }.compositingGroup()
-                } else {
-                    ZStack(alignment: .leading) {
-                        Image("battery.100percent")
-                            .resizable().scaledToFit()
-                            .frame(width: 27)
-                            .opacity(0.4)
-                            .mask (
-                                HStack {
-                                    Spacer().frame(minWidth: 0)
-                                    Rectangle().frame(width: min(25, CGFloat(100 - item.batteryLevel) / 100 * 27))
-                                }
-                            )
-                        Image("battery.100percent")
-                            .resizable().scaledToFit()
-                            .foregroundColor(colorfulBattery ? Color(getPowerColor(ib2ab(item)) + "2") : (item.batteryLevel <= 10 ? .red : .primary))
-                            .frame(width: 27)
-                            .mask (
-                                HStack {
-                                    Rectangle().frame(width: max(2, CGFloat(item.batteryLevel) / 100 * 27))
-                                    Spacer().frame(minWidth: 0)
-                                }
-                            )
-                        if batteryPercent == "inside" && !(item.batteryLevel > hideLevel) {
-                            if colorfulBattery {
-                                BatteryLevelView(item: item)
-                                    .foregroundColor(.white)
-                            } else {
-                                BatteryLevelView(item: item)
-                                    .foregroundColor(.white)
-                                    .blendMode(.destinationOut)
-                            }
-                        } else {
-                            if item.acPowered {
-                                Image("batt_" + ((item.isCharging || item.isCharged) ? "bolt" : "plug") + "_mask")
-                                    .blendMode(.destinationOut)
-                                    .offset(x:6.5)
-                                Image("batt_" + ((item.isCharging || item.isCharged) ? "bolt" : "plug"))
-                                    .offset(x:6.5)
-                                    .foregroundColor(.blackWhite)
-                            }
+                    } else {
+                        if item.acPowered {
+                            Image("batt_" + ((item.isCharging || item.isCharged) ? "bolt" : "plug") + "_mask")
+                                .blendMode(.destinationOut)
+                                .offset(x:6.5)
+                            Image("batt_" + ((item.isCharging || item.isCharged) ? "bolt" : "plug"))
+                                .offset(x:6.5)
+                                .foregroundColor(.blackWhite)
                         }
-                    }.compositingGroup()
+                    }
+                }.compositingGroup()
+            }
+        } else {
+            Image("bolt.square.fill")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 16, height: 16)
+        }
+    }
+
+    func targetWidth() -> Double {
+        if !(item.hasBattery && intBattOnStatusBar) { return 36 }
+        var width: Double = 42
+        if batteryPercent == "outside" && !(item.batteryLevel > hideLevel) { width = 76 }
+        if showTimeLeft {
+            let horizontal = batteryTimePosition == "left" || batteryTimePosition == "right"
+            width = horizontal ? width + timeWidth(9) + 6 : max(width, timeWidth(8) + 4)
+        }
+        return width
+    }
+
+    var body: some View {
+        Group {
+            if showTimeLeft {
+                switch batteryTimePosition {
+                case "left":
+                    HStack(alignment: .center, spacing: 3) { timeLabel(9); batteryContent }
+                case "top":
+                    VStack(spacing: 1) { timeLabel(8); batteryContent }
+                case "bottom":
+                    VStack(spacing: 1) { batteryContent; timeLabel(8) }
+                default:
+                    HStack(alignment: .center, spacing: 3) { batteryContent; timeLabel(9) }
                 }
             } else {
-                Image("bolt.square.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 16, height: 16)
+                HStack(alignment: .center, spacing: 4) { batteryContent }
             }
         }
         .onReceive(dockTimer) { t in refeshPinnedBar() }
@@ -161,15 +224,8 @@ struct mainBatteryView: View {
                         InternalBattery.status = getPowerState()
                     }
                     item = InternalBattery.status
-                    if batteryPercent != "outside" {
-                        if width != 42 { setStatusBar(width: 42) }
-                    } else {
-                        if item.batteryLevel > hideLevel {
-                            if width != 42 { setStatusBar(width: 42) }
-                        } else {
-                            if width != 76 { setStatusBar(width: 76) }
-                        }
-                    }
+                    let target = targetWidth()
+                    if width != target { setStatusBar(width: target) }
                 } else {
                     if width != 36 { setStatusBar(width: 36) }
                 }
