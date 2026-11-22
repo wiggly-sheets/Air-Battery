@@ -5,6 +5,8 @@ Based on the official [AirBattery](https://github.com/lihaoyun6/AirBattery) proj
 
 ## [Unreleased]
 
+## [1.6.6] - 2026-11-22
+
 ### Added
 
 - Menu bar time remaining for the built-in Mac battery, with left, right, top and bottom positions, and a compact `2h15m` or long `2 hours 15 minutes` format.
