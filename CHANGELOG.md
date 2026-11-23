@@ -5,6 +5,8 @@ Based on the official [AirBattery](https://github.com/lihaoyun6/AirBattery) proj
 
 ## [Unreleased]
 
+## [1.6.7] - 2026-11-23
+
 ### Changed
 
 - The release publishes one disk image per architecture, `AirBattery-<version>-arm64.dmg` and `AirBattery-<version>-x86_64.dmg`, with `checksums.txt`.
