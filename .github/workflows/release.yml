@@ -78,7 +78,7 @@ jobs:
             echo "## Checksums"
             echo ""
             echo '```'
-            cat "AirBattery-$VERSION.dmg.sha256"
+            cat "release/checksums.txt"
             echo '```'
           } >> release-notes.md
 
@@ -87,10 +87,13 @@ jobs:
           VERSION: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          test -s "AirBattery-$VERSION.dmg"
-          test -s "AirBattery-$VERSION.dmg.sha256"
-          shasum -a 256 -c "AirBattery-$VERSION.dmg.sha256"
-          ls -lh "AirBattery-$VERSION.dmg" "AirBattery-$VERSION.dmg.sha256"
+          test -s "release/AirBattery-$VERSION-arm64.dmg"
+          test -s "release/AirBattery-$VERSION-x86_64.dmg"
+          test -s "release/checksums.txt"
+          (cd release && shasum -a 256 -c checksums.txt)
+          ls -lh release/AirBattery-"$VERSION"-arm64.dmg \
+            release/AirBattery-"$VERSION"-x86_64.dmg \
+            release/checksums.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -99,6 +102,7 @@ jobs:
           body_path: release-notes.md
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            AirBattery-*.dmg
-            AirBattery-*.dmg.sha256
+            release/AirBattery-${{ steps.version.outputs.tag }}-arm64.dmg
+            release/AirBattery-${{ steps.version.outputs.tag }}-x86_64.dmg
+            release/checksums.txt
           fail_on_unmatched_files: true

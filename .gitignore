@@ -93,3 +93,4 @@ iOSInjectionProject/
 AirBattery-*.dmg
 AirBattery-*.dmg.sha256
 dmgstage/
+release/

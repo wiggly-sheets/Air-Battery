@@ -37,3 +37,5 @@ jobs:
           esac
       - run: make test
       - run: make build
+      - run: make app
+      - run: make verify
